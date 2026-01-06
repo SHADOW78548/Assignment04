@@ -1,35 +1,52 @@
-// using System;
-// using System.IO;
-// using System.Threading.Tasks;
-// using Microsoft.AspNetCore.Mvc;
-// using Microsoft.Azure.WebJobs;
-// using Microsoft.Azure.WebJobs.Extensions.Http;
-// using Microsoft.AspNetCore.Http;
-// using Microsoft.Extensions.Logging;
-// using Newtonsoft.Json;
+using System.Net;
+using System.Threading.Tasks;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Logging;
 
-// namespace FunctionApp
-// {
-//     public static class ProductTrigger
-//     {
-//         [FunctionName("ProductTrigger")]
-//         public static async Task<IActionResult> Run(
-//             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-//             ILogger log)
-//         {
-//             log.LogInformation("C# HTTP trigger function processed a request.");
+namespace FunctionApp
+{
+    public class ProductTrigger
+    {
+        private readonly ILogger<ProductTrigger> _logger;
 
-//             string name = req.Query["name"];
+        public ProductTrigger(ILogger<ProductTrigger> logger)
+        {
+            _logger = logger;
+        }
 
-//             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-//             dynamic data = JsonConvert.DeserializeObject(requestBody);
-//             name = name ?? data?.name;
+        [Function("ProductTrigger")]
+        public async Task<HttpResponseData> Run(
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequestData req)
+        {
+            _logger.LogInformation("C# HTTP trigger function processed a request.");
 
-//             string responseMessage = string.IsNullOrEmpty(name)
-//                 ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-//                 : $"Hello, {name}. This HTTP triggered function executed successfully.";
+            // Read query string
+            var query = System.Web.HttpUtility.ParseQueryString(req.Url.Query);
+            string name = query["name"];
 
-//             return new OkObjectResult(responseMessage);
-//         }
-//     }
-// }
+            // Read body
+            var body = await req.ReadAsStringAsync();
+            if (string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(body))
+            {
+                try
+                {
+                    var data = System.Text.Json.JsonSerializer.Deserialize<dynamic>(body);
+                    name = data?.name;
+                }
+                catch
+                {
+                    // ignore parse errors
+                }
+            }
+
+            string responseMessage = string.IsNullOrEmpty(name)
+                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
+                : $"Hello, {name}. This HTTP triggered function executed successfully.";
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(responseMessage);
+            return response;
+        }
+    }
+}

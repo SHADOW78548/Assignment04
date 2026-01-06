@@ -21,7 +21,7 @@ namespace FunctionApp.Controller
 
         [Function("CreateOrder")]
         public async Task<HttpResponseData> CreateOrder(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "orders/add")] HttpRequestData req)
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = "orders/add")] HttpRequestData req)
         {
             var order = await req.ReadFromJsonAsync<Order>();
             var createdOrder = _orderService.CreateOrder(order!);
