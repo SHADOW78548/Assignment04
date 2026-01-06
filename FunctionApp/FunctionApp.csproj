@@ -1,15 +1,15 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.6.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-    <PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
+  <ItemGroup> 
+  <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.16.0" /> 
+  <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.16.0" OutputItemType="Analyzer" /> 
+  <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" /> 
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.0" /> 
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0" /> 
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

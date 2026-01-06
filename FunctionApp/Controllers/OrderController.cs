@@ -1,8 +1,7 @@
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using FunctionApp.Services;
 using FunctionApp.Models;
@@ -20,57 +19,91 @@ namespace FunctionApp.Controller
             _orderService = orderService;
         }
 
-        [FunctionName("CreateOrder")]
-        public async Task<IActionResult> CreateOrder(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "orders/add")] HttpRequest req)
+        [Function("CreateOrder")]
+        public async Task<HttpResponseData> CreateOrder(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "orders/add")] HttpRequestData req)
         {
             var order = await req.ReadFromJsonAsync<Order>();
             var createdOrder = _orderService.CreateOrder(order!);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(createdOrder);
             _logger.LogInformation("Order created successfully.");
-            return new OkObjectResult(createdOrder);
+            return response;
         }
 
-        [FunctionName("GetAllOrders")]
-        public IActionResult GetAllOrders(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orders")] HttpRequest req)
+        [Function("GetAllOrders")]
+        public async Task<HttpResponseData> GetAllOrders(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orders")] HttpRequestData req)
         {
             var orders = _orderService.GetAllOrders();
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(orders);
             _logger.LogInformation("All orders retrieved successfully.");
-            return new OkObjectResult(orders);
+            return response;
         }
 
-        [FunctionName("GetOrderById")]
-        public IActionResult GetOrderById(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orders/{id}")] HttpRequest req, int id)
+        [Function("GetOrderById")]
+        public async Task<HttpResponseData> GetOrderById(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "orders/{id}")] HttpRequestData req, int id)
         {
             var order = _orderService.GetOrderById(id);
-            if (order == null) return new NotFoundResult();
+            var response = req.CreateResponse(order == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (order == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "Order not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(order);
+            }
 
             _logger.LogInformation("Order retrieved successfully.");
-            return new OkObjectResult(order);
+            return response;
         }
 
-        [FunctionName("UpdateOrder")]
-        public async Task<IActionResult> UpdateOrder(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "orders/{id}")] HttpRequest req, int id)
+        [Function("UpdateOrder")]
+        public async Task<HttpResponseData> UpdateOrder(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "orders/{id}")] HttpRequestData req, int id)
         {
             var order = await req.ReadFromJsonAsync<Order>();
             var updatedOrder = _orderService.UpdateOrder(id, order!);
-            if (updatedOrder == null) return new NotFoundResult();
+
+            var response = req.CreateResponse(updatedOrder == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (updatedOrder == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "Order not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(updatedOrder);
+            }
 
             _logger.LogInformation("Order updated successfully.");
-            return new OkObjectResult(updatedOrder);
+            return response;
         }
 
-        [FunctionName("DeleteOrder")]
-        public IActionResult DeleteOrder(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "orders/{id}")] HttpRequest req, int id)
+        [Function("DeleteOrder")]
+        public async Task<HttpResponseData> DeleteOrder(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "orders/{id}")] HttpRequestData req, int id)
         {
             var deletedOrder = _orderService.DeleteOrder(id);
-            if (deletedOrder == null) return new NotFoundResult();
+            var response = req.CreateResponse(deletedOrder == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (deletedOrder == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "Order not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(deletedOrder);
+            }
 
             _logger.LogInformation("Order deleted successfully.");
-            return new OkObjectResult(deletedOrder);
+            return response;
         }
     }
 }

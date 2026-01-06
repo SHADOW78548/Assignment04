@@ -1,8 +1,7 @@
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using FunctionApp.Services;
 using FunctionApp.Models;
@@ -20,57 +19,91 @@ namespace FunctionApp.Controllers
             _logger = logger;
         }
 
-        [FunctionName("CreateUser")]
-        public async Task<IActionResult> CreateUser(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "users/add")] HttpRequest req)
+        [Function("CreateUser")]
+        public async Task<HttpResponseData> CreateUser(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "users/add")] HttpRequestData req)
         {
             var user = await req.ReadFromJsonAsync<User>();
             var createdUser = _userService.CreateUser(user!);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(createdUser);
             _logger.LogInformation("User created successfully.");
-            return new OkObjectResult(createdUser);
+            return response;
         }
 
-        [FunctionName("GetAllUsers")]
-        public IActionResult GetAllUsers(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users")] HttpRequest req)
+        [Function("GetAllUsers")]
+        public async Task<HttpResponseData> GetAllUsers(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users")] HttpRequestData req)
         {
             var users = _userService.GetAllUsers();
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(users);
             _logger.LogInformation("All users retrieved successfully.");
-            return new OkObjectResult(users);
+            return response;
         }
 
-        [FunctionName("GetUserById")]
-        public IActionResult GetUserById(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users/{id}")] HttpRequest req, int id)
+        [Function("GetUserById")]
+        public async Task<HttpResponseData> GetUserById(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "users/{id}")] HttpRequestData req, int id)
         {
             var user = _userService.GetUserById(id);
-            if (user == null) return new NotFoundResult();
+            var response = req.CreateResponse(user == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (user == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "User not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(user);
+            }
 
             _logger.LogInformation("User retrieved successfully.");
-            return new OkObjectResult(user);
+            return response;
         }
 
-        [FunctionName("UpdateUser")]
-        public async Task<IActionResult> UpdateUser(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "users/{id}")] HttpRequest req, int id)
+        [Function("UpdateUser")]
+        public async Task<HttpResponseData> UpdateUser(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "users/{id}")] HttpRequestData req, int id)
         {
             var user = await req.ReadFromJsonAsync<User>();
             var updatedUser = _userService.UpdateUser(id, user!);
-            if (updatedUser == null) return new NotFoundResult();
+
+            var response = req.CreateResponse(updatedUser == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (updatedUser == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "User not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(updatedUser);
+            }
 
             _logger.LogInformation("User updated successfully.");
-            return new OkObjectResult(updatedUser);
+            return response;
         }
 
-        [FunctionName("DeleteUser")]
-        public IActionResult DeleteUser(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "users/{id}")] HttpRequest req, int id)
+        [Function("DeleteUser")]
+        public async Task<HttpResponseData> DeleteUser(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "users/{id}")] HttpRequestData req, int id)
         {
             var deletedUser = _userService.DeleteUser(id);
-            if (deletedUser == null) return new NotFoundResult();
+            var response = req.CreateResponse(deletedUser == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
+            if (deletedUser == null)
+            {
+                await response.WriteAsJsonAsync(new { message = "User not found" });
+            }
+            else
+            {
+                await response.WriteAsJsonAsync(deletedUser);
+            }
 
             _logger.LogInformation("User deleted successfully.");
-            return new OkObjectResult(deletedUser);
+            return response;
         }
     }
 }

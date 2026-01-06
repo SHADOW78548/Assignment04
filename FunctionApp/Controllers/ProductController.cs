@@ -1,8 +1,7 @@
+using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.AspNetCore.Http;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using FunctionApp.Services;
 using FunctionApp.Models;
@@ -20,63 +19,91 @@ namespace FunctionApp.Controllers
             _productService = productService;
         }
 
-        [FunctionName("CreateProduct")]
-        public async Task<IActionResult> CreateProduct(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "products/add")] HttpRequest req)
+        [Function("CreateProduct")]
+        public async Task<HttpResponseData> CreateProduct(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "products/add")] HttpRequestData req)
         {
             var product = await req.ReadFromJsonAsync<Product>();
             var createdProduct = _productService.CreateProduct(product!);
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(createdProduct);
             _logger.LogInformation("Product created successfully.");
-            return new OkObjectResult(createdProduct);
+            return response;
         }
 
-        [FunctionName("GetAllProducts")]
-        public IActionResult GetAllProducts(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products")] HttpRequest req)
+        [Function("GetAllProducts")]
+        public async Task<HttpResponseData> GetAllProducts(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products")] HttpRequestData req)
         {
             var products = _productService.GetAllProducts();
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteAsJsonAsync(products);
             _logger.LogInformation("All products retrieved successfully.");
-            return new OkObjectResult(products);
+            return response;
         }
 
-        [FunctionName("GetProductById")]
-        public IActionResult GetProductById(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products/{id}")] HttpRequest req, int id)
+        [Function("GetProductById")]
+        public async Task<HttpResponseData> GetProductById(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products/{id}")] HttpRequestData req, int id)
         {
             var product = _productService.GetProductById(id);
+            var response = req.CreateResponse(product == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
             if (product == null)
             {
-                return new NotFoundResult();
+                await response.WriteAsJsonAsync(new { message = "Product not found" });
             }
+            else
+            {
+                await response.WriteAsJsonAsync(product);
+            }
+
             _logger.LogInformation("Product retrieved successfully.");
-            return new OkObjectResult(product);
+            return response;
         }
 
-        [FunctionName("UpdateProduct")]
-        public async Task<IActionResult> UpdateProduct(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "products/{id}")] HttpRequest req, int id)
+        [Function("UpdateProduct")]
+        public async Task<HttpResponseData> UpdateProduct(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "products/{id}")] HttpRequestData req, int id)
         {
             var product = await req.ReadFromJsonAsync<Product>();
             var updatedProduct = _productService.UpdateProduct(id, product!);
+
+            var response = req.CreateResponse(updatedProduct == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
             if (updatedProduct == null)
             {
-                return new NotFoundResult();
+                await response.WriteAsJsonAsync(new { message = "Product not found" });
             }
+            else
+            {
+                await response.WriteAsJsonAsync(updatedProduct);
+            }
+
             _logger.LogInformation("Product updated successfully.");
-            return new OkObjectResult(updatedProduct);
+            return response;
         }
 
-        [FunctionName("DeleteProduct")]
-        public IActionResult DeleteProduct(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "products/{id}")] HttpRequest req, int id)
+        [Function("DeleteProduct")]
+        public async Task<HttpResponseData> DeleteProduct(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "products/{id}")] HttpRequestData req, int id)
         {
             var deletedProduct = _productService.DeleteProduct(id);
+            var response = req.CreateResponse(deletedProduct == null ? HttpStatusCode.NotFound : HttpStatusCode.OK);
+
             if (deletedProduct == null)
             {
-                return new NotFoundResult();
+                await response.WriteAsJsonAsync(new { message = "Product not found" });
             }
+            else
+            {
+                await response.WriteAsJsonAsync(deletedProduct);
+            }
+
             _logger.LogInformation("Product deleted successfully.");
-            return new OkObjectResult(deletedProduct);
+            return response;
         }
     }
 }
